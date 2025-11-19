@@ -1,42 +1,33 @@
 # Group-by Aggregation POC
 
-A small TypeScript proof-of-concept for dynamically grouping and aggregating tabular datasets (e.g., "sum of quantity by month", "count by region", "profit by product"). Produces output suitable for tables or data visualizations.
+A TypeScript proof-of-concept for flexible grouping and aggregation of tabular data. For example: "sum of quantity by month", "count by region", or "profit by product". The output is designed to fit tables or data visualizations.
 
+> See [ProblemCase.md](./ProblemCase.md) for the original requirements, example widget specs, data samples, and expected aggregation outputs.
 
-> See [ProblemCase.md](./ProblemCase.md) for the initial motivation, example widget specs, sample data, function prototype, and expected aggregation output formatting.
->
-> ProblemCase.md includes:
-> - Example specs for grouping and aggregating data for widget tables
-> - Sample input data
-> - Expected result tables
-> - Notes on calculated/derived columns like Profit
-> 
-> This repository implements those specs (and more) in typed TypeScript, using strongly typed specs and extensible aggregation definitions. See below for data model, spec structure, available aggregations, and usage.
-
-
-
-
+---
 
 ## Data Model
 
-Each record should implement the following interface (the main codebase uses `DefaultData`):
+Records should implement the following interface (`DefaultData`), which defines the supported columns for aggregation:
 
 ```ts
 export interface DefaultData {
   region: string;
   month: string;
   price: number;
-  cost: number;s
+  cost: number;
   product: string;
   quantity: number;
 }
 ```
 
-You can extend this interface as needed. All types (including aggregation spec types) are inferred from your record type.
+You may extend this interface to add dimensions or measures. All aggregation types are inferred based on your record type.
+
+---
 
 ## Spec Definition
 
-Specs describe how to group and aggregate. Use `AggregationSpec<T>`:
+To describe what to group and aggregate, use the `AggregationSpec<TRecord>` type:
 
 ```ts
 export interface AggregationSpec<TRecord> {
@@ -45,25 +36,29 @@ export interface AggregationSpec<TRecord> {
   aggregateBy: {
     label: string;
     function: 'sum' | 'count' | 'profit-margin';
-    field?: keyof TRecord; // required for sum
+    field?: keyof TRecord; // Required for sum
   }[];
 }
 ```
 
-- `groupBy`: The dimension to group on (e.g., 'month', 'region').
-- `aggregateBy`: Array of metrics to calculate per group (columns in result).
+- `groupBy` (key): The field to group rows by (e.g., `"month"`, `"region"`).
+- `aggregateBy` (array): Metrics to compute for each group. Functions may require a field.
+
+---
 
 ## Supported Aggregations
 
-- `sum`: Totals a numeric field. (Requires `field`.)
-- `count`: Row count per group (no field needed).
-- `profit-margin`: Sums `(price - cost) * quantity` per group, formatted as USD.
+- `sum`: Totals a numeric field per group (requires `field`).
+- `count`: Number of rows per group (no field needed).
+- `profit-margin`: Sums `(price - cost) * quantity` for each group, formatted as USD.
 
-Add new aggregate types by updating the union in `types.ts` and the `calculateAggregate` method in the aggregation service.
+To add custom aggregations, update the type union in `types.ts` and the calculation logic in the aggregation service.
+
+---
 
 ## Usage Example
 
-The composition is centered around use cases and aggregation services:
+Aggregate by specifying a spec and passing your data:
 
 ```ts
 import { DefaultData, AggregationSpec } from './src/domain/aggregation/types';
@@ -95,35 +90,42 @@ const grouped = useCase.execute({ spec, data });
 // ]
 ```
 
-Returned rows are objects with a `groupKey` property containing the group, and a `values` dictionary with each aggregation result. Output is ideal for tables and easy to transform for charts.
+Each result row has:
+- `groupKey: Record<string, any>` — the value of the group field.
+- `values: Record<string, string | number>` — calculated results, by aggregation label.
+
+---
 
 ## Testing
 
-Vitest is set up for unit testing:
+Vitest is used for unit tests:
 
 ```
 npm install
 npm run test         # watch mode
-npm run test:run     # one shot (CI)
+npm run test:run     # run once (CI)
 npm run test:coverage
 ```
 
-See `src/application/use-cases/generate-widget-default-data.test.ts` for real sample data and cases spanning multi-aggregate output and validation errors.
+Tests are in:  
+`src/application/use-cases/generate-widget-default-data.test.ts` (contains realistic data and validation/error cases).
+
+---
 
 ## File Structure
 
-- `src/domain/aggregation/types.ts` – data and aggregation type definitions
-- `src/domain/aggregation/default-aggregation-service.ts` – aggregation logic
-- `src/domain/aggregation/aggregation-service.ts` – aggregation interface
-- `src/application/use-cases/generate-widget-data-use-case.ts` – application-layer use case
-- `src/application/use-cases/generate-widget-default-data.test.ts` – Vitest coverage
-- `README.md` – this document
+- `src/domain/aggregation/types.ts` — data and spec type definitions
+- `src/domain/aggregation/default-aggregation-service.ts` — aggregation algorithm
+- `src/domain/aggregation/aggregation-service.ts` — aggregation service interface
+- `src/application/use-cases/generate-widget-data-use-case.ts` — orchestration/use case
+- `src/application/use-cases/generate-widget-default-data.test.ts` — Vitest tests
+- `README.md` — this guide
+
+---
 
 ## Possible Extensions
 
-Ideas for growth:
-- Support for additional aggregate functions (average, min, max, distinct count, custom formulas).
-- Output adapters for chart libraries (labels/series, etc).
-- UI or DSL for authoring aggregation specs.
-
+- Additional aggregate functions (average, min, max, distinct count, custom formulas)
+- Output formatting for chart libraries
+- UI or DSL for authoring specs
 
