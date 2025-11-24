@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { InventoryEvent } from "../domain/inventory-event/inventory-event";
-import { InventoryEventRepository } from "../domain/inventory-event/inventory-event-repository";
 import { Product } from "../domain/product/product";
-import { ProductRepository } from "../domain/product/product-repository";
 import { Store } from "../domain/store/store";
-import { StoreRepository } from "../domain/store/store-repository";
 import { GetRevenuePerTenant } from "./get-revenue-per-tenant";
 import { InMemoryInventoryEventRepository, InMemoryProductRepository, InMemoryStoreRepository } from "../infrastructure/in-memory-repositories";
 import { inventoryEvents, products, stores } from "../data/example-data";
